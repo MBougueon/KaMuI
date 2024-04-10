@@ -68,9 +68,9 @@ def acceptance_criterion_norm(proposed, current, mu, sigma=1):
     sigma: float, std of the wanted distribution
     """
 
-    return (np.exp(-0.5 * ((proposed - mu)**2 - (current - mu)**2) / (sigma**2)))
+    return (np.log(np.exp(-0.5 * ((proposed - mu)**2 - (current - mu)**2) / (sigma**2))))
 
-def acceptance_criterion_gamma(proposed, current, k, theta):
+def acceptance_criterion_gamma(proposed, current, a, b):
     """Acceptance criterion for Metropolis-hasitng define by the gamma distribution 
     
     Parameter
@@ -85,7 +85,7 @@ def acceptance_criterion_gamma(proposed, current, k, theta):
     theta: float, scale parameter of the wanted distribution
 
     """  
-    return ((proposed / current)**(k - 1) * np.exp(-(proposed - current) / theta))
+    return (np.log((proposed / current)**(a - 1) * np.exp(-(proposed - current) / b)))
 
     
 

@@ -3,9 +3,10 @@
 
 import distribution as dis
 import numpy as np
+from scipy.stats import gamma
 
 
-def gibbs_sampler(X, y, theta_other, p, distribution):
+def gibbs_sampler(X, y, theta_other, p, distribution, **kwargs):
     """
     Samples a parameter theta_i from its conditional distribution given other parameters.
 
@@ -19,29 +20,53 @@ def gibbs_sampler(X, y, theta_other, p, distribution):
         Vector of other parameters.
     p : int
         Index of the parameter to sample.
+    distribution : str
+        Type of conditional distribution.
+    **kwargs : dict
+        Additional keyword arguments based on the chosen distribution.
+        - a_0 : float, shape parameter for gamma distribution
+        - b_0 : float, scale parameter for gamma distribution
 
     Returns:
     --------
     numpy.ndarray
         A new sample of theta_i.
     """
+
     # Select the p-th column of the design matrix
     X_p = X[:, p:p+1]
+
     # Get the other parameters
     X_other = np.delete(X, p, axis=1)
+
     # Delete parameter p from the vector of other parameters
     theta_other = np.delete(theta_other, p)
 
     if distribution == "normal_multi":
         # Compute the conditional mean of theta_p
         mu_p = np.linalg.solve(X_p.T @ X_p, X_p.T @ (y - X_other @ theta_other))
+
         # Compute the conditional covariance of theta_p
         sigma_p = np.linalg.inv(X_p.T @ X_p)
 
         # Sample theta_p from the multivariate normal distribution
-        return (np.random.multivariate_normal(mu_p.flatten(), sigma_p))
+        return np.random.multivariate_normal(mu_p.flatten(), sigma_p)
 
-    # elif distribution == "gamma":
+    elif distribution == "normal":
+        mu_p = np.linalg.solve(X_p.T @ X_p, X_p.T @ (y - X_other @ theta_other))
+        sigma_p = 1 / (X_p.T @ X_p)
+        return np.random.normal(mu_p, np.sqrt(sigma_p))
+
+    elif distribution == "gamma":
+        # Compute the predicted values using other parameters
+        y_hat = np.exp(X_other @ theta_other)
+        # Compute the shape parameter of the gamma distribution
+        a_p =  kwargs['a0'] + np.sum(y)
+        # Compute the rate parameter of the gamma distribution
+        b_p =  kwargs['b0'] + np.sum(y_hat)
+        return gamma.rvs(a_p, scale=1/b_p)
+
+
 
 
 def metropolis_hasting(current, prior_distribution, **kwargs):
@@ -78,12 +103,18 @@ def metropolis_hasting(current, prior_distribution, **kwargs):
 
     # Calculate the acceptance criterion based on the prior distribution type
     if prior_distribution == "normal":
-        acceptance_crit = dis.acceptance_criterion_norm(proposal, current, kwargs['mu'], kwargs['sigma'])
+        acceptance_crit = dis.acceptance_criterion_norm(proposal,
+                                                        current,
+                                                        kwargs['mu'],
+                                                        kwargs['sigma'])
     elif prior_distribution == "gamma":
-        acceptance_crit = dis.acceptance_criterion_gamma(proposal, current, kwargs['k'], kwargs['theta'])
+        acceptance_crit = dis.acceptance_criterion_gamma(proposal,
+                                                         current,
+                                                         kwargs['a'],
+                                                         kwargs['b'])
 
-    # Generate a random number between 0 and 1
-    u = np.random.uniform(0, 1)
+    # Generate a random number between 0 and 1 on wich a log is applied
+    u = np.log(np.random.uniform(0, 1))
 
     # Accept the proposal with probability equal to the acceptance criterion
     if u < acceptance_crit:
@@ -91,7 +122,7 @@ def metropolis_hasting(current, prior_distribution, **kwargs):
 
     return(current)
 
-def mcmc(parameters, data, observations, prior_distribution, approach="metropolis_hasting", N = 1000, burn_in=0.2, **kwargs):
+def mcmc(parameters, data, observations, prior_distribution, approach, N = 1000, burn_in = 0.2, **kwargs):
     """
     MCMC algorithm to estimate parameters using either Metropolis-Hastings or Gibbs sampling.
 
@@ -112,8 +143,8 @@ def mcmc(parameters, data, observations, prior_distribution, approach="metropoli
         Possible keys include:
         - sigma : float, standard deviation for normal distribution
         - mu : float, mean for normal distribution
-        - k : float, shape parameter for gamma distribution
-        - theta : float, scale parameter for gamma distribution
+        - a : float, shape parameter for gamma distribution
+        - b : float, scale parameter for gamma distribution
 
     Returns:
     --------
@@ -122,8 +153,6 @@ def mcmc(parameters, data, observations, prior_distribution, approach="metropoli
     """
     all_samples = []  # List to store all samples for each parameter
     idx_burn_in = int(burn_in * N)  # Index to start considering samples after burn-in period
-
-
 
     for i in range(N):  # Generate N samples
         for p in range(parameters):  # Loop over each parameter
@@ -134,13 +163,11 @@ def mcmc(parameters, data, observations, prior_distribution, approach="metropoli
                 parameters[p] = metropolis_hasting(p, prior_distribution, **kwargs)
 
             elif approach == "gibbs":
-                # Use Gibbs sampling algorithm to sample the parameter
                 len_ob = len(observations)  # Number of observations
                 len_p = len(parameters)  # Number of parameters
                 X = np.random.randn(len_ob, len_p)  # Design matrix
-                theta_current = parameters
                 y = X @ data  # Simulate data for Gibbs sampling
-                parameters[p] = gibbs_sampler(X, y, theta_current, p, prior_distribution)  # Gibbs sampling step
+                parameters[p] = gibbs_sampler(X, y, parameters, p, prior_distribution)  # Gibbs sampling step
 
             if i >= idx_burn_in:  # After the burn-in period
                 sample.append(parameters)  # Store the current parameter sample
