@@ -1,7 +1,6 @@
 #python 3.10
 """Extract data from the simulation for parameters inference"""
 
-from pyabc import Distribution, History
 
 def get_data():
     """"""

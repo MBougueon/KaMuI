@@ -7,28 +7,6 @@ import numpy as np
 
 
     
-# def prior_distribution_gibbs(parameter, mu, sigma):
-#     """
-#     Propose a new value for a parameter following a uniforme distribution
-
-#     Parameter
-#     ---------
-
-#     theta: parameter estimate
-
-#     mu: mean valeur of theta
-
-#     sigma: std of theta
-
-#     Return
-#     ------
-
-#     proposed_theta: new value of theta
-#     """
-
-#     proposed_theta = np.random.uniform(max(0, mu - sigma), min(mu + sigma, y))
-
-#     return proposed_theta
 
 def prior_distribution_MH(distribution,theta, sigma=1,):
     """
@@ -49,9 +27,9 @@ def prior_distribution_MH(distribution,theta, sigma=1,):
     proposed_theta: float,new value of theta
     """
     if distribution == "normal":
-        return np.random.normal(theta, sigma)
+        return round(np.random.normal(theta, sigma), 4)
     elif distribution == "gamma":
-        return np.random.gamma(theta, sigma)
+        return round(np.random.gamma(theta, sigma), 4)
 
 def acceptance_criterion_norm(proposed, current, mu, sigma=1):
     """Acceptance criterion for Metropolis-hasitng define by the normal distribution 

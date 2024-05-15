@@ -824,8 +824,6 @@ def graph_4d_v2(folder, output, timing, first_input_time, data_measure,graph_for
 
 
 
-
-
 if __name__ == '__main__':
     INI_FILE = "graph_kaSim.ini"
     parameters = utils.import_ini(INI_FILE)
@@ -844,18 +842,18 @@ if __name__ == '__main__':
     #                     parameters['variable_analysed'],
     #                     str(parameters['graph_format']))
 
-    sensibility_3d_graph(str(parameters['input_graph']),
-                        parameters['output_graph'],
-                        parameters['variable_analysed'],
-                        str(parameters['graph_format']),
-                        variables)
+    # sensibility_3d_graph(str(parameters['input_graph']),
+    #                     parameters['output_graph'],
+    #                     parameters['variable_analysed'],
+    #                     str(parameters['graph_format']),
+    #                     variables)
 
-    # mean_graph(parameters['input_graph'], 
-    #     parameters['output_graph'],
-    #     int(parameters['nb_iteration']), 
-    #     int(parameters['interval_py']),
-    #     parameters['tgfb1_pool_by_cell'],
-    #     parameters['graph_format'])
+    mean_graph(parameters['input_graph'], 
+        parameters['output_graph'],
+        int(parameters['nb_iteration']), 
+        int(parameters['interval_py']),
+        parameters['tgfb1_pool_by_cell'],
+        parameters['graph_format'])
 
     # for f in os.listdir(parameters['input_graph']):
     #     output = f"{parameters['input_graph']}{f}/graph/"
