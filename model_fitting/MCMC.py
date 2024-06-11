@@ -5,70 +5,73 @@ import distribution as dis
 import numpy as np
 from scipy.stats import gamma
 from launch import *
+import matplotlib.pylab as plt
 
+def compute_conditional_params(mu, cov, idx, known_indices, known_values):
+    """
+    Compute the conditional mean and variance for the idx-th variable given known values.
+    Parameters:
+    -----------
 
-# def gibbs_sampler_V1(X, y, theta_other, p, distribution, **kwargs):
-#     """
-#     Samples a parameter theta_i from its conditional distribution given other parameters.
+    mu: numpy.ndarray
+        Mean vector of the multivariate normal distribution.
+    cov: numpy.ndarray
+        Covariance matrix of the multivariate normal distribution.
+    idx: int
+        Index of the variable to sample.
+    known_indices: list
+        Indices of the known variables.
+    known_values: list
+        Values of the known variables.
 
-#     Parameters:
-#     -----------
-#     X : numpy.ndarray
-#         Design matrix.
-#     y : numpy.ndarray
-#         Target values vector.
-#     theta_other : numpy.ndarray
-#         Vector of other parameters.
-#     p : int
-#         Index of the parameter to sample.
-#     distribution : str
-#         Type of conditional distribution.
-#     **kwargs : dict
-#         Additional keyword arguments based on the chosen distribution.
-#         - a_0 : float, shape parameter for gamma distribution
-#         - b_0 : float, scale parameter for gamma distribution
+    Returns:
+    --------
+    Conditional mean: float
+        New conditional mean value
+    Conditional variance: float
+        New conditional variance value
+    """
+    # Extract the relevant submatrices and vectors
+    mu_current = mu[idx]
 
-#     Returns:
-#     --------
-#     numpy.ndarray
-#         A new sample of theta_i.
-#     """
+    mu_other = mu[known_indices]
+    
+    sigma_curent = cov[idx, idx]
+    sigma_other = cov[np.ix_(known_indices, known_indices)]
+    sigma_current_other = cov[idx, known_indices]
+    
+    # Compute the inverse of the covariance matrix of known variables
+    sigma_other_inv = np.linalg.inv(sigma_other))
 
-#     # Select the p-th column of the design matrix
-#     X_p = X[:, p:p+1]
+    
+    # Compute the conditional mean
+    conditional_mean = mu_current + sigma_sigma_current_otherx_yz @ sigma_other_inv @ (known_values - mu_other)
+    
+    # Compute the conditional variance
+    conditional_variance = sigma_curent - sigma_current_other @ sigma_other_inv @ sigma_x_yz.T
+    
+    return conditional_mean, conditional_variance
+ 
+def gibbs_sampler(parameters,prior_distribution):
+    #list of parameter values
+    values = [parameters[p][0] for p in parameters.keys()]
+    #list of the paramters mean
+    mu = [parameters[p][1] for p in parameters.keys()]
+    #list of paramters idx
+    para_idx = range(len(parameters))
+    #TO DO COV 
 
-#     # Get the other parameters
-#     X_other = np.delete(X, p, axis=1)
-
-#     # Delete parameter p from the vector of other parameters
-#     theta_other = np.delete(theta_other, p)
-
-#     if distribution == "normal_multi":
-#         # Compute the conditional mean of theta_p
-#         mu_p = np.linalg.solve(X_p.T @ X_p, X_p.T @ (y - X_other @ theta_other))
-
-#         # Compute the conditional covariance of theta_p
-#         sigma_p = np.linalg.inv(X_p.T @ X_p)
-
-#         # Sample theta_p from the multivariate normal distribution
-#         proposed_p =  np.random.multivariate_normal(mu_p.flatten(), sigma_p)
-
-#     elif distribution == "normal":
-#         mu_p = np.linalg.solve(X_p.T @ X_p, X_p.T @ (y - X_other @ theta_other))
-#         sigma_p = 1 / (X_p.T @ X_p)
-#         proposed_p =  np.random.normal(mu_p, np.sqrt(sigma_p))
-
-#     elif distribution == "gamma":
-#         # Compute the predicted values using other parameters
-#         y_hat = np.exp(X_other @ theta_other)
-#         # Compute the shape parameter of the gamma distribution
-#         a_p =  kwargs['a0'] + np.sum(y)
-#         # Compute the rate parameter of the gamma distribution
-#         b_p =  kwargs['b0'] + np.sum(y_hat)
-#         proposed_p = gamma.rvs(a_p, scale=1/b_p)
-        
-#     return(proposed_p)
-
+    for idx in para_idx: 
+        #get a list of other parameters values
+        other_values = values[:idx] + values[idx+1:]
+        #get a list of other parameter ixd
+        other_idx = para_idx[:idx] + mylist[idx+1:]
+        conditional_mean, conditional_variance = compute_conditional_params(mu, cov, idx, other_idx, np.array(other_values))
+        current = np.random.normal(conditional_mean, np.sqrt(conditional_variance))
+        #replace the value of the current parameter by its new one      
+        values[p]= current
+    
+    return np.array(values)
 
 def metropolis_hasting(current, prior_distribution, mu, sigma):
     """
@@ -92,36 +95,41 @@ def metropolis_hasting(current, prior_distribution, mu, sigma):
     sigma : float, standard deviation for normal distribution or shape parameter for gamma distribution
 
     mu : float, mean for normal distribution or scale parameter for gamma distribution
+
+    Returns:
+    --------
+    proposal: float
+        proposed new value
     """
 
 
     # Propose a new sample based on the prior distribution
     proposal = -0.1
+    count = 0
+    u = np.log(np.random.uniform(0, 1))
+    acceptance_crit = 1
     # some time the value given can be negative, which is not support by Kappa
     # Loop ensure that the value remaine positive
-    while proposal < 0:
+    while proposal <= 0 & (u > acceptance_crit):
         proposal = dis.prior_distribution_MH(prior_distribution, current, sigma)
-
     # Calculate the acceptance criterion based on the prior distribution type
-    if prior_distribution == "normal":
-        acceptance_crit = dis.acceptance_criterion_norm(proposal,
-                                                        current,
-                                                        mu,
-                                                        sigma)
-    elif prior_distribution == "gamma":
-        acceptance_crit = dis.acceptance_criterion_gamma(proposal,
-                                                         current,
-                                                         mu,
-                                                         sigma)
-
-    # Generate a random number between 0 and 1 on wich a log is applied
-    u = np.log(np.random.uniform(0, 1))
+        if prior_distribution == "normal":
+            acceptance_crit = dis.acceptance_criterion_norm(proposal,
+                                                            current,
+                                                            mu,
+                                                            sigma)
+        elif prior_distribution == "gamma":
+            acceptance_crit = dis.acceptance_criterion_gamma(proposal,
+                                                            current,
+                                                            mu,
+                                                            sigma)
+        # Generate a random number between 0 and 1 on wich a log is applied
+        u = np.log(np.random.uniform(0, 1))
 
     # Accept the proposal with probability equal to the acceptance criterion
-    if u < acceptance_crit:
-        current = proposal
-
-    return(current)
+    # if u < acceptance_crit:
+    #     current = proposal
+    return(proposal)
 
 def mcmc(parameters, data, observations, prior_distribution, approach, N = 1000, burn_in = 0.2, **kwargs):
     """
@@ -152,42 +160,21 @@ def mcmc(parameters, data, observations, prior_distribution, approach, N = 1000,
     list
         List of samples for each parameter.
     """
-    all_samples = []  # List to store all samples for each parameter
     idx_burn_in = int(burn_in * N)  # Index to start considering samples after burn-in period
-
+    sample = {}
+    for p in parameters.keys():
+        sample[p] = [parameters[p][0]]
     for i in range(N):  # Generate N samples
-        for p in parameters.keys():  # Loop over each parameter
-            sample = []  # List to store samples for the current parameter
-            parameter = {p : parameters[p][0]}
-            # parallelized_launch(kwargs['kasim'], 
-                                # kwargs['time'], 
-                                # parameter, 
-                                # kwargs['input_file'],
-                                # kwargs['output_file'],
-                                # kwargs['log_folder'],
-                                # kwargs['nb_para_job'],
-                                # kwargs['repeat'])
-
-            if approach == "metropolis_hasting":
+          # List to store samples for the current parameter
+        if approach == "metropolis_hasting":
+            for p in parameters.keys():  # Loop over each parameter
                 # Use Metropolis-Hastings algorithm to sample the parameter
-
                 parameters[p][0] = metropolis_hasting(parameters[p][0], prior_distribution, parameters[p][1], parameters[p][2])
+        elif approach == "gibbs":
 
-            elif approach == "gibbs":
-                len_ob = len(observations)  # Number of observations
-                len_p = len(parameters)  # Number of parameters
-                X = np.random.randn(len_ob, len_p)  # Design matrix
-                y = X @ data  # Simulate data for Gibbs sampling
-                parameters[p] = gibbs_sampler_V1(X, y, parameters, p, prior_distribution)  # Gibbs sampling step
-
-            if i >= idx_burn_in:  # After the burn-in period
-                sample.append(parameters)  # Store the current parameter sample
-
-        # Store the samples for the current parameter
-        all_samples.append(sample)
-        print(all_samples)
-
-    return all_samples
+        if i >= idx_burn_in:  # After the burn-in period
+            sample[p].append(parameters[p][0])   # Store the current parameter sample)
+    return sample
 
 
 
@@ -203,10 +190,25 @@ if __name__ == '__main__':
             # %var: 'on_rate' 1.0E-3 // per molecule per second
             # %var: 'off_rate' 0.1 // per second
             # %var: 'mod_rate' 1 // per second
-    parameters = {'off_rate' : [0.1,0.1,0.05],
-                  'on_rate' : [1e-3, 1e-3, 5e-4],
-                  'mod_rate' :[1,1,0.5]}
+    parameters = {'off_rate' : [9,9,0.5],
+                  'on_rate' : [1e-3, 1e-3, 3e-3],
+                  'mod_rate' :[70,70,7]}
     data = []
     observations = []
-    test1 = mcmc(parameters, data, observations, "gamma", "metropolis_hasting", 10, 0.2, **kwargs)
+    test1 = mcmc(parameters, data, observations, "gamma", "metropolis_hasting", 100, 0.2, **kwargs)
     print(test1)
+    for key in parameters.keys():
+        t =  [x for x in range(1, len(test1[key])+1)]
+        plt.plot(t,test1[key])
+        plt.show()
+
+        plt.close()
+                    # parameter = {p : parameters[p][0]}
+                # parallelized_launch(kwargs['kasim'], 
+                                    # kwargs['time'], 
+                                    # parameter, 
+                                    # kwargs['input_file'],
+                                    # kwargs['output_file'],
+                                    # kwargs['log_folder'],
+                                    # kwargs['nb_para_job'],
+                                    # kwargs['repeat'])
