@@ -3,8 +3,7 @@
 
 import distribution as dis
 import numpy as np
-from scipy.stats import gamma
-from launch import *
+# from launch import *
 import matplotlib.pylab as plt
 
 def compute_conditional_params(mu, cov, idx, known_indices, known_values):
@@ -33,45 +32,73 @@ def compute_conditional_params(mu, cov, idx, known_indices, known_values):
     """
     # Extract the relevant submatrices and vectors
     mu_current = mu[idx]
-
     mu_other = mu[known_indices]
-    
+
+
     sigma_curent = cov[idx, idx]
     sigma_other = cov[np.ix_(known_indices, known_indices)]
     sigma_current_other = cov[idx, known_indices]
-    
-    # Compute the inverse of the covariance matrix of known variables
-    sigma_other_inv = np.linalg.inv(sigma_other))
 
-    
-    # Compute the conditional mean
-    conditional_mean = mu_current + sigma_sigma_current_otherx_yz @ sigma_other_inv @ (known_values - mu_other)
-    
-    # Compute the conditional variance
-    conditional_variance = sigma_curent - sigma_current_other @ sigma_other_inv @ sigma_x_yz.T
-    
+    #Case with only 2 parameters equation must be adapted
+    if len(sigma_other) == 1:
+        sigma_other = sigma_other[0]
+        sigma_current_other = sigma_current_other[0]
+        known_values = known_values[0]
+        # Compute the inverse of the covariance matrix of known variables
+        sigma_other_inv = 1/sigma_other
+        # Compute the conditional mean
+        conditional_mean = int(mu_current + sigma_current_other * sigma_other_inv * (known_values - mu_other))
+        # Compute the conditional variance
+        conditional_variance = int(sigma_curent - sigma_current_other * sigma_other_inv * sigma_current_other)
+
+    else:
+        sigma_other_inv = np.linalg.inv(sigma_other)
+        # Compute the conditional mean
+        conditional_mean = mu_current + sigma_current_other @ sigma_other_inv @ (known_values - mu_other)
+
+        # Compute the conditional variance
+        conditional_variance = sigma_curent - sigma_current_other @ sigma_other_inv @ sigma_current_other
+
     return conditional_mean, conditional_variance
- 
-def gibbs_sampler(parameters,prior_distribution):
-    #list of parameter values
-    values = [parameters[p][0] for p in parameters.keys()]
-    #list of the paramters mean
-    mu = [parameters[p][1] for p in parameters.keys()]
-    #list of paramters idx
-    para_idx = range(len(parameters))
-    #TO DO COV 
 
-    for idx in para_idx: 
+def gibbs_sampler(parameters,prior_distribution):
+    """Gibbs sampler 
+
+    Parameters
+    ----------
+    parameter : dictionnary
+        value of the paramters
+
+    prior_distribution : string
+        Target PDF (Probability Density Function)."""
+    values = []
+    mus = []
+    data = []
+    for p in parameters.keys():
+        #list of parameter values
+        values.append(parameters[p][0])
+        #list of the paramters mean
+        mus.append(parameters[p][1])
+        #list of values generated for the COV
+        if prior_distribution == "normal":
+            data.append(np.random.normal(parameters[p][1], parameters[p][2], 10))
+        if prior_distribution == "gamma":
+            data.append(np.random.gamma(parameters[p][1], parameters[p][2], 10))
+    mus = np.array(mus)
+    #list of paramters idx, * for unpacking
+    para_idx = [*range(0, len(parameters))]
+    cov = np.cov(data)
+    for idx in para_idx:
         #get a list of other parameters values
         other_values = values[:idx] + values[idx+1:]
         #get a list of other parameter ixd
-        other_idx = para_idx[:idx] + mylist[idx+1:]
-        conditional_mean, conditional_variance = compute_conditional_params(mu, cov, idx, other_idx, np.array(other_values))
+        other_idx = para_idx[:idx] + para_idx[idx+1:]
+        conditional_mean, conditional_variance = compute_conditional_params(mus, cov, idx, other_idx, np.array(other_values))
         current = np.random.normal(conditional_mean, np.sqrt(conditional_variance))
-        #replace the value of the current parameter by its new one      
-        values[p]= current
-    
-    return np.array(values)
+        #replace the value of the current parameter by its new one
+        values[idx]= current
+
+    return values
 
 def metropolis_hasting(current, prior_distribution, mu, sigma):
     """
@@ -79,7 +106,7 @@ def metropolis_hasting(current, prior_distribution, mu, sigma):
 
     Parameters
     ----------
-    currnet : float
+    current : float
         value of the paramters estimated.
 
     prior_distribution : string
@@ -105,7 +132,6 @@ def metropolis_hasting(current, prior_distribution, mu, sigma):
 
     # Propose a new sample based on the prior distribution
     proposal = -0.1
-    count = 0
     u = np.log(np.random.uniform(0, 1))
     acceptance_crit = 1
     # some time the value given can be negative, which is not support by Kappa
@@ -131,7 +157,7 @@ def metropolis_hasting(current, prior_distribution, mu, sigma):
     #     current = proposal
     return(proposal)
 
-def mcmc(parameters, data, observations, prior_distribution, approach, N = 1000, burn_in = 0.2, **kwargs):
+def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2, **kwargs):
     """
     MCMC algorithm to estimate parameters using either Metropolis-Hastings or Gibbs sampling.
 
@@ -170,16 +196,24 @@ def mcmc(parameters, data, observations, prior_distribution, approach, N = 1000,
             for p in parameters.keys():  # Loop over each parameter
                 # Use Metropolis-Hastings algorithm to sample the parameter
                 parameters[p][0] = metropolis_hasting(parameters[p][0], prior_distribution, parameters[p][1], parameters[p][2])
+                if i >= idx_burn_in:  # After the burn-in period
+                    sample[p].append(parameters[p][0])   # Store the current parameter sample)
+                
         elif approach == "gibbs":
-
-        if i >= idx_burn_in:  # After the burn-in period
-            sample[p].append(parameters[p][0])   # Store the current parameter sample)
+            samp = gibbs_sampler(parameters,prior_distribution)
+            print(samp)
+            if i >= idx_burn_in:
+                idx = 0
+                for p in parameters.keys():
+                    sample[p].append(samp[idx])
+                    idx +=1
+        
     return sample
 
 
 
 if __name__ == '__main__':
-    
+
     kwargs = {"kasim":"/Tools/KappaTools-master/bin/KaSim",
             "time" : 1000,
             "input_file":"/home/palantir/Post_doc/KaMuI/model_fitting/toy_model.ka",
@@ -190,23 +224,22 @@ if __name__ == '__main__':
             # %var: 'on_rate' 1.0E-3 // per molecule per second
             # %var: 'off_rate' 0.1 // per second
             # %var: 'mod_rate' 1 // per second
+    # WARNING IF PARAMETER TO LOW, COV = 0
     parameters = {'off_rate' : [9,9,0.5],
-                  'on_rate' : [1e-3, 1e-3, 3e-3],
-                  'mod_rate' :[70,70,7]}
-    data = []
-    observations = []
-    test1 = mcmc(parameters, data, observations, "gamma", "metropolis_hasting", 100, 0.2, **kwargs)
+                  'on_rate' : [1e-1, 1e-1, 3e-1]}
+                #   'mod_rate' :[70,70,7]}
+    test1 = mcmc(parameters, "gamma", "gibbs", 10, 0.2, **kwargs)
     print(test1)
     for key in parameters.keys():
         t =  [x for x in range(1, len(test1[key])+1)]
         plt.plot(t,test1[key])
         plt.show()
 
-        plt.close()
+    #     plt.close()
                     # parameter = {p : parameters[p][0]}
-                # parallelized_launch(kwargs['kasim'], 
-                                    # kwargs['time'], 
-                                    # parameter, 
+                # parallelized_launch(kwargs['kasim'],
+                                    # kwargs['time'],
+                                    # parameter,
                                     # kwargs['input_file'],
                                     # kwargs['output_file'],
                                     # kwargs['log_folder'],
