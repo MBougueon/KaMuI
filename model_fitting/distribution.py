@@ -28,9 +28,9 @@ def prior_distribution_MH(distribution,theta, sigma=1,):
     proposed_theta: float,new value of theta
     """
     if distribution == "normal":
-        return round(np.random.normal(theta, sigma), 5)
+        return round(np.random.normal(theta, sigma), 2)
     elif distribution == "gamma":
-        return round(np.random.gamma(theta, sigma), 5)
+        return round(np.random.gamma(theta, sigma), 2)
 
 def acceptance_criterion_norm(proposed, current, mu, sigma=1):
     """Acceptance criterion for Metropolis-hasting define by the normal distribution
@@ -51,7 +51,7 @@ def acceptance_criterion_norm(proposed, current, mu, sigma=1):
 
 def acceptance_criterion_gamma(proposed, current, k, theta):
     """Acceptance criterion for Metropolis-hasting define by the gamma distribution
-    
+    #TODO NOT FINISH, REACH EASILY FLOAT MAX VALUE, NEED CORRECTION
     Parameter
     ---------
     
@@ -64,8 +64,11 @@ def acceptance_criterion_gamma(proposed, current, k, theta):
     theta: float, scale parameter of the wanted distribution
 
     """  
-    if ((k  != 0) & (proposed != 0)):
-        # return (np.log(np.exp(-(proposed / theta) - (current / theta)) * proposed**(-1 + k) * current**(1 - k)))
+    if ((k  != 0) & (proposed != 0))):
+
+        # a = (proposed**(k-1)*np.exp((-proposed)/theta))/(current**(k-1)*np.exp((-current)/theta))
+        # return min(1,np.log(a))
+        #return min(1,(np.log(round(np.exp(-(proposed / theta) - (current / theta)) * proposed**(-1 + k) * current**(1 - k)))))
         alpha = (gamma.logpdf(proposed, k, scale=1.0/theta) /
                  gamma.logpdf(current, k, scale=1.0/theta))
         return min(1,alpha)

@@ -74,29 +74,33 @@ def gibbs_sampler(parameters,prior_distribution):
     values = []
     mus = []
     data = []
-    for p in parameters.keys():
-        #list of parameter values
-        values.append(parameters[p][0])
-        #list of the paramters mean
-        mus.append(parameters[p][1])
-        #list of values generated for the COV
-        if prior_distribution == "normal":
-            data.append(np.random.normal(parameters[p][1], parameters[p][2], 10))
-        if prior_distribution == "gamma":
-            data.append(np.random.gamma(parameters[p][1], parameters[p][2], 10))
-    mus = np.array(mus)
-    #list of paramters idx, * for unpacking
-    para_idx = [*range(0, len(parameters))]
-    cov = np.cov(data)
-    for idx in para_idx:
-        #get a list of other parameters values
-        other_values = values[:idx] + values[idx+1:]
-        #get a list of other parameter ixd
-        other_idx = para_idx[:idx] + para_idx[idx+1:]
-        conditional_mean, conditional_variance = compute_conditional_params(mus, cov, idx, other_idx, np.array(other_values))
-        current = np.random.normal(conditional_mean, np.sqrt(conditional_variance))
-        #replace the value of the current parameter by its new one
-        values[idx]= current
+    if prior_distribution == "normal":
+        for p in parameters.keys():
+            #list of parameter values
+            values.append(parameters[p][0])
+            #list of the paramters mean
+            mus.append(parameters[p][1])
+            #list of values generated for the COV
+            if prior_distribution == "normal":
+                data.append(np.random.normal(parameters[p][1], parameters[p][2], 10))
+            if prior_distribution == "gamma":
+                data.append(np.random.gamma(parameters[p][1], parameters[p][2], 10))
+        mus = np.array(mus)
+        #list of paramters idx, * for unpacking
+        para_idx = [*range(0, len(parameters))]
+        cov = np.cov(data)
+        for idx in para_idx:
+            #get a list of other parameters values
+            other_values = values[:idx] + values[idx+1:]
+            #get a list of other parameter ixd
+            other_idx = para_idx[:idx] + para_idx[idx+1:]
+            conditional_mean, conditional_variance = compute_conditional_params(mus, cov, idx, other_idx, np.array(other_values))
+            current = np.random.normal(conditional_mean, np.sqrt(conditional_variance))
+            #replace the value of the current parameter by its new one
+            values[idx]= current
+    else: 
+        #TODO Search for Gamma distribution
+        print(f"{prior_distribution} not implemented")
 
     return values
 
@@ -134,6 +138,7 @@ def metropolis_hasting(current, prior_distribution, mu, sigma):
     proposal = -0.1
     u = np.log(np.random.uniform(0, 1))
     acceptance_crit = 1
+    tries = 0
     # some time the value given can be negative, which is not support by Kappa
     # Loop ensure that the value remaine positive
     while proposal <= 0 & (u > acceptance_crit):
@@ -155,7 +160,8 @@ def metropolis_hasting(current, prior_distribution, mu, sigma):
     # Accept the proposal with probability equal to the acceptance criterion
     # if u < acceptance_crit:
     #     current = proposal
-    return(proposal)
+        tries +=1
+    return(proposal, tries)
 
 def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2, **kwargs):
     """
@@ -188,27 +194,30 @@ def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2, **kw
     """
     idx_burn_in = int(burn_in * N)  # Index to start considering samples after burn-in period
     sample = {}
+    tries = [0]*len(parameters)
     for p in parameters.keys():
         sample[p] = [parameters[p][0]]
     for i in range(N):  # Generate N samples
           # List to store samples for the current parameter
+        t = 0
         if approach == "metropolis_hasting":
             for p in parameters.keys():  # Loop over each parameter
                 # Use Metropolis-Hastings algorithm to sample the parameter
-                parameters[p][0] = metropolis_hasting(parameters[p][0], prior_distribution, parameters[p][1], parameters[p][2])
+                parameters[p][0], tri = metropolis_hasting(parameters[p][0], prior_distribution, parameters[p][1], parameters[p][2])
                 if i >= idx_burn_in:  # After the burn-in period
                     sample[p].append(parameters[p][0])   # Store the current parameter sample)
+                    tries[t] = tries[t]+tri
+                t +=1
                 
         elif approach == "gibbs":
             samp = gibbs_sampler(parameters,prior_distribution)
-            print(samp)
             if i >= idx_burn_in:
                 idx = 0
                 for p in parameters.keys():
                     sample[p].append(samp[idx])
                     idx +=1
         
-    return sample
+    return sample, tries
 
 
 
@@ -225,14 +234,16 @@ if __name__ == '__main__':
             # %var: 'off_rate' 0.1 // per second
             # %var: 'mod_rate' 1 // per second
     # WARNING IF PARAMETER TO LOW, COV = 0
-    parameters = {'off_rate' : [9,9,0.5],
-                  'on_rate' : [1e-1, 1e-1, 3e-1]}
-                #   'mod_rate' :[70,70,7]}
-    test1 = mcmc(parameters, "gamma", "gibbs", 10, 0.2, **kwargs)
-    print(test1)
+    parameters = {'off_rate' : [4,9,0.5],
+                  'on_rate' : [1e-1, 1e-1, 3e-1],
+                   'mod_rate' :[10,70,7],
+                   'bidule' : [10,10,1]}
+    test1, tries = mcmc(parameters, "gamma", "metropolis_hasting", 10000, 0.2, **kwargs)
+    print(tries)
     for key in parameters.keys():
         t =  [x for x in range(1, len(test1[key])+1)]
         plt.plot(t,test1[key])
+        plt.title(key)
         plt.show()
 
     #     plt.close()
