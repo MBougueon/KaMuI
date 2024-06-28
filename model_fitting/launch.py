@@ -27,7 +27,6 @@ def combinaisons_making(varia):
     combination: list,
         contain of the combinaison for all the variables
     """
-    print(varia)
     value = []
     for var in varia:  # browse the list of variable
         value.append(varia[var])
@@ -86,10 +85,10 @@ def launch_kasim(kasim,time,varia,input_file,output,log_folder,repeat,combinatio
         output_file = f'{output}{output_name}/'
         if not os.path.isdir(output):
             os.mkdir(output)
-
+    print(var_com)
     output_name = output_name + f"_{str(nb_repeat)}"
     command = f"{kasim} {input_file} {var_com} -l {time_simu} -d {log_folder} -o {output_file}{output_name}.csv"
-    subprocess.run(command, shell=True, check=True)  # execute the KaSim command
+    # subprocess.run(command, shell=True, check=True)  # execute the KaSim command
 
 def parallelized_launch(kasim, time, variables_test, input_file, output_file, log_folder, nb_para_job=4, repeat =1):
     """
@@ -122,7 +121,7 @@ def parallelized_launch(kasim, time, variables_test, input_file, output_file, lo
             combinations = combinaisons_making(variables_test)
         else:
             combinations = list(variables_test.values())
-
+        print("ok")
         combinations_repeats = combinations * repeat
         func = partial(launch_kasim,
             kasim,

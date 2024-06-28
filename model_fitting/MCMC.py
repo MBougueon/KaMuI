@@ -3,7 +3,7 @@
 
 import distribution as dis
 import numpy as np
-# from launch import *
+from launch import *
 import matplotlib.pylab as plt
 
 def compute_conditional_params(mu, cov, idx, known_indices, known_values):
@@ -163,7 +163,7 @@ def metropolis_hasting(current, prior_distribution, mu, sigma):
         tries +=1
     return(proposal, tries)
 
-def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2, **kwargs):
+def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2):
     """
     MCMC algorithm to estimate parameters using either Metropolis-Hastings or Gibbs sampling.
 
@@ -228,7 +228,7 @@ if __name__ == '__main__':
             "input_file":"/home/palantir/Post_doc/KaMuI/model_fitting/toy_model.ka",
             "output_file": "/home/palantir/Post_doc/KaMuI/model_fitting/tests/",
             "log_folder": "/home/palantir/Post_doc/KaMuI/model_fitting/tests/logs",
-            "nb_para_job":4,
+            "nb_para_job":2,
             "repeat":2 }
             # %var: 'on_rate' 1.0E-3 // per molecule per second
             # %var: 'off_rate' 0.1 // per second
@@ -238,21 +238,19 @@ if __name__ == '__main__':
                   'on_rate' : [1e-1, 1e-1, 3e-1],
                    'mod_rate' :[10,70,7],
                    'bidule' : [10,10,1]}
-    test1, tries = mcmc(parameters, "gamma", "metropolis_hasting", 10000, 0.2, **kwargs)
-    print(tries)
-    for key in parameters.keys():
-        t =  [x for x in range(1, len(test1[key])+1)]
-        plt.plot(t,test1[key])
-        plt.title(key)
-        plt.show()
+    generated_val, tries = mcmc(parameters, "normal", "metropolis_hasting", 10, 0.2)
+    # for key in parameters.keys():
+    #     t =  [x for x in range(1, len(generated_val[key])+1)]
+    #     plt.plot(t,generated_val[key])
+    #     plt.title(key)
+    #     plt.show()
 
     #     plt.close()
-                    # parameter = {p : parameters[p][0]}
-                # parallelized_launch(kwargs['kasim'],
-                                    # kwargs['time'],
-                                    # parameter,
-                                    # kwargs['input_file'],
-                                    # kwargs['output_file'],
-                                    # kwargs['log_folder'],
-                                    # kwargs['nb_para_job'],
-                                    # kwargs['repeat'])
+    parallelized_launch(kwargs['kasim'],
+                        kwargs['time'],
+                        generated_val,
+                        kwargs['input_file'],
+                        kwargs['output_file'],
+                        kwargs['log_folder'],
+                        kwargs['nb_para_job'],
+                        kwargs['repeat'])
