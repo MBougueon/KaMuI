@@ -6,8 +6,6 @@ Alow the graph generation from KaSim simulations
 import os
 import pathlib
 import re
-import shutil
-
 
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -85,6 +83,10 @@ def dataframe_opening(folder, timing, variables, first_input_time):
         folder where csv files are stocked
     timing: list of integer
         timing where the agents occurences will be studied
+    variables: list,
+        list of the modified variables
+    first_input_time: int
+        time of the first input
     """
     
     df_list = []

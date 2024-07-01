@@ -4,6 +4,7 @@
 import distribution as dis
 import numpy as np
 from launch import *
+from data_extraction import *
 import matplotlib.pylab as plt
 
 def compute_conditional_params(mu, cov, idx, known_indices, known_values):
@@ -234,11 +235,11 @@ if __name__ == '__main__':
             # %var: 'off_rate' 0.1 // per second
             # %var: 'mod_rate' 1 // per second
     # WARNING IF PARAMETER TO LOW, COV = 0
-    parameters = {'off_rate' : [4,9,0.5],
-                  'on_rate' : [1e-1, 1e-1, 3e-1],
-                   'mod_rate' :[10,70,7],
-                   'bidule' : [10,10,1]}
-    generated_val, tries = mcmc(parameters, "normal", "metropolis_hasting", 10, 0.2)
+    parameters = {'off_rate' : [4,9,0.5]}
+                #'on_rate' : [1e-1, 1e-1, 3e-1],
+                #    'mod_rate' :[10,70,7],
+                #    'bidule' : [10,10,1]}
+    # generated_val, tries = mcmc(parameters, "normal", "metropolis_hasting", 10, 0.2)
     # for key in parameters.keys():
     #     t =  [x for x in range(1, len(generated_val[key])+1)]
     #     plt.plot(t,generated_val[key])
@@ -246,11 +247,13 @@ if __name__ == '__main__':
     #     plt.show()
 
     #     plt.close()
-    parallelized_launch(kwargs['kasim'],
-                        kwargs['time'],
-                        generated_val,
-                        kwargs['input_file'],
-                        kwargs['output_file'],
-                        kwargs['log_folder'],
-                        kwargs['nb_para_job'],
-                        kwargs['repeat'])
+    # parallelized_launch(kwargs['kasim'],
+    #                     kwargs['time'],
+    #                     generated_val,
+    #                     kwargs['input_file'],
+    #                     kwargs['output_file'],
+    #                     kwargs['log_folder'],
+    #                     kwargs['nb_para_job'],
+    #                     kwargs['repeat'])
+
+    get_data(kwargs['output_file'], ['off_rate'], [100])

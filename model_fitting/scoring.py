@@ -44,7 +44,7 @@ def likelihood(exp_data, sim_data, m, n):
     for i in range(n):
         for j in range(m):
             prediction_error = exp_data[i] - sim_data[j]
-            error_variance = #UTILISER LA STD DES SIMULATIONS ? 
+            error_variance = x #UTILISER LA STD DES SIMULATIONS ? 
             term2 += (prediction_error ** 2) / (error_variance ** 2) + 2 * np.log(error_variance)
     
     # Combine the terms to get -2 log(L)
@@ -71,6 +71,5 @@ def weighted_aic (aic_values):
 
     for aic in aic_values:
         w.append(np.exp(-(aic - min_aicc) / 2) / np.sum(exp_terms))
-
     return w
 
