@@ -41,11 +41,14 @@ def likelihood(exp_data, sim_data, m, n):
     
     # Term: sum over i and j
     term2 = 0
+    # each validation point
     for i in range(n):
-        for j in range(m):
-            prediction_error = exp_data[i] - sim_data[j]
-            error_variance = x #UTILISER LA STD DES SIMULATIONS ? 
-            term2 += (prediction_error ** 2) / (error_variance ** 2) + 2 * np.log(error_variance)
+        #distance between exp and simul data
+        prediction_error = [exp_data[i] - sim_data[l] for l  in range(m)]
+        #each sample
+        for j in range(m):        
+            error_variance = np.std(prediction_error)
+            term2 += (prediction_error[j] ** 2) / (error_variance ** 2) + 2 * np.log(error_variance)
     
     # Combine the terms to get -2 log(L)
     log_likelihood_value = term1 + term2
