@@ -258,4 +258,5 @@ if __name__ == '__main__':
     #                     kwargs['nb_para_job'],
     #                     kwargs['repeat'])
 
-    get_data(kwargs['output_file'], ['off_rate'], [100])
+    df = get_data(kwargs['output_file'], ['off_rate'], [75,100])
+    print(df)
