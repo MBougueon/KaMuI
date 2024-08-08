@@ -76,3 +76,9 @@ def weighted_aic (aic_values):
         w.append(np.exp(-(aic - min_aicc) / 2) / np.sum(exp_terms))
     return w
 
+def score_calc( exp_data, sim_data, m, n):
+    """"""
+
+
+
+    

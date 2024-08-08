@@ -26,7 +26,7 @@ def get_dataframe(filepath):  # Pierre
             skiprows=[0, 1],  # Skip lines for each problem
         )
 
-def parse_dataframes(file_path, var_v_float, variables, timing):
+def parse_dataframes(file_path, var_v_float, variables, timing, exp_id):
     """ Extract the wanted values for each simulation files
 
     Parameters
@@ -39,6 +39,8 @@ def parse_dataframes(file_path, var_v_float, variables, timing):
         tested parameters
     timing: list,
         Time of simulation that need to be extract
+    exp_id: int
+        Id of the simulation
 
     Return
     ------
@@ -47,6 +49,7 @@ def parse_dataframes(file_path, var_v_float, variables, timing):
     col_name: list
         name of the column of the df
     """
+    df_list = []
     for path in pathlib.Path(file_path).iterdir():
         # list copy, whitout it both list will be incremented
         df = pd.DataFrame()
@@ -64,8 +67,9 @@ def parse_dataframes(file_path, var_v_float, variables, timing):
             var = []
             var += len(df) * [var_v_float[i]]
             df.insert(1, variables[i], var, allow_duplicates=True)
-            col_name = df.columns
-        df_list = df.values.tolist()
+        df.insert(1, 'exp_sim', exp_id, allow_duplicates=True)
+        col_name = df.columns            
+        df_list += df.values.tolist()
     return(df_list, col_name)
 
 def get_data(folder, variables, timing):
@@ -89,7 +93,7 @@ def get_data(folder, variables, timing):
 
     df_list = []
     col_name = []
-
+    exp_id = 1
 
     for subfold in os.listdir(folder):
         file_path = f"{folder}{subfold}/"#concatenattion to form the path were the files are
@@ -104,8 +108,9 @@ def get_data(folder, variables, timing):
         if (len(var_v) > 0):
             for item in var_v:
                 var_v_float.append(float(item))
-            d_list, col_name = parse_dataframes(file_path, var_v_float, variables, timing)
+            d_list, col_name = parse_dataframes(file_path, var_v_float, variables, timing, exp_id)
             df_list += d_list
+        exp_id +=1
 
     #fuse the mean data from of each experiments
     dfram = pd.DataFrame(df_list, columns=col_name)

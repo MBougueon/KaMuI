@@ -87,7 +87,7 @@ def launch_kasim(kasim,time,varia,input_file,output,log_folder,repeat,combinatio
             os.mkdir(output)
     output_name = output_name + f"_{str(nb_repeat)}"
     command = f"{kasim} {input_file} {var_com} -l {time_simu} -d {log_folder} -o {output_file}{output_name}.csv"
-    # subprocess.run(command, shell=True, check=True)  # execute the KaSim command
+    subprocess.run(command, shell=True, check=True)  # execute the KaSim command
 
 def parallelized_launch(kasim, time, variables_test, input_file, output_file, log_folder, nb_para_job=4, repeat =1):
     """

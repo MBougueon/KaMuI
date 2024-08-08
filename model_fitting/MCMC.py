@@ -231,16 +231,12 @@ if __name__ == '__main__':
             "log_folder": "/home/palantir/Post_doc/KaMuI/model_fitting/tests/logs",
             "nb_para_job":2,
             "repeat":2 }
-            # %var: 'on_rate' 1.0E-3 // per molecule per second
-            # %var: 'off_rate' 0.1 // per second
-            # %var: 'mod_rate' 1 // per second
-    # WARNING IF PARAMETER TO LOW, COV = 0
-    # parameters = {'off_rate' : [4,9,0.5],
-    #             'on_rate' : [1e-1, 1e-1, 3e-1],
-    #             'mod_rate' :[10,70,7]}
-    #                #'bidule' : [10,10,1]}
-    # method = "metropolis_hasting"
-    # generated_val, tries = mcmc(parameters, "normal", method, 10000, 0.2)
+    parameters = {'off_rate' : [4,9,0.5],
+                'on_rate' : [1e-1, 1e-1, 3e-1]}
+                #'mod_rate' :[10,70,7]}
+                   #'bidule' : [10,10,1]}
+    method = "metropolis_hasting"
+    #generated_val, tries = mcmc(parameters, "normal", method, 5, 0.2)
     # for key in parameters.keys():
     #     t =  [x for x in range(1, len(generated_val[key])+1)]
     #     plt.plot(t,generated_val[key])
@@ -250,13 +246,13 @@ if __name__ == '__main__':
 
     #     plt.close()
     # parallelized_launch(kwargs['kasim'],
-    #                     kwargs['time'],
-    #                     generated_val,
-    #                     kwargs['input_file'],
-    #                     kwargs['output_file'],
-    #                     kwargs['log_folder'],
-    #                     kwargs['nb_para_job'],
-    #                     kwargs['repeat'])
+                        # kwargs['time'],
+                        # generated_val,
+                        # kwargs['input_file'],
+                        # kwargs['output_file'],
+                        # kwargs['log_folder'],
+                        # kwargs['nb_para_job'],
+                        # kwargs['repeat'])
 
-    df = get_data(kwargs['output_file'], ['off_rate'], [75,100])
+    df = get_data(kwargs['output_file'], ['off_rate', 'on_rate'], [75,100])
     print(df)
