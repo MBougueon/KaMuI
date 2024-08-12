@@ -16,9 +16,8 @@ def aic_c(log_likelihood, k, n):
     aic_c: float,
         AICc values of the model
     """
-    aic_c = log_likelihood + ((2*k*n)/(n-k-1))
-
-    return(aic_c)
+    aic = log_likelihood + ((2*k*n)/(n-k-1))
+    return(aic)
 
 def likelihood(exp_data, sim_data, m, n):
     """Calculate the likelihood of the model given its parameters and the experimental data
@@ -42,13 +41,15 @@ def likelihood(exp_data, sim_data, m, n):
     # Term: sum over i and j
     term2 = 0
     # each validation point
-    for i in range(n):
+
+    for j in range(m): 
         #distance between exp and simul data
-        prediction_error = [exp_data[i] - sim_data[l] for l  in range(m)]
-        #each sample
-        for j in range(m):        
-            error_variance = np.std(prediction_error)
-            term2 += (prediction_error[j] ** 2) / (error_variance ** 2) + 2 * np.log(error_variance)
+        prediction_error = [exp_data[j] - sim_data[j][l] for l  in range(len(sim_data[j]))]
+
+        error_variance = np.std(prediction_error)
+        if error_variance == 0:
+            error_variance = 10e-6
+        term2 += (prediction_error[j] / error_variance )**2 + 2 * np.log(error_variance)
     
     # Combine the terms to get -2 log(L)
     log_likelihood_value = term1 + term2
@@ -68,17 +69,38 @@ def weighted_aic (aic_values):
         list of the weighted AICc value of each model
     """
     min_aicc = min(aic_values)
-    exp_terms = np.exp([-(aicc - min_aicc) / 2 for aicc in aic_values])
+    d_aicc = np.asarray([-(aicc - min_aicc) for aicc in aic_values])
+    w_aicc = np.exp(-0.5*d_aicc)/np.sum(np.exp(-0.5*d_aicc))
+    return(w_aicc)
 
-    w = []
-
-    for aic in aic_values:
-        w.append(np.exp(-(aic - min_aicc) / 2) / np.sum(exp_terms))
-    return w
-
-def score_calc( exp_data, sim_data, m, n):
+def score_calc(df, parameters, exp_data, observations ):
     """"""
+    """Calculate the score for each paramters
+    Parameters:
+    -----------
+    df: panda dataframe,
+        df with sim values, paremters values
+    parameters: list,
+        name of the parameters
+    exp_data: dictionnary
+        name and value of the experimental observations
+    Returns:
+    ------
+    """
+    aic = {}
+    for id in enumerate(df['exp_sim']):
+        for time in enumerate(df.loc[df['exp_sim'] == id[1], '[T]']):
+            sim_exp = []
+            for obs in observations:
+                sim_exp.append(df.loc[(df['exp_sim'] == id[1]) & (df['[T]'] == time[1]), obs].tolist())
+        L = likelihood(exp_data, sim_exp, len(sim_exp[0]), len(observations))     
+        aic[id[1]]= aic_c(L,len(sim_exp[0]), len(parameters))
+    print(aic)
+    b_aic = weighted_aic (aic.values())
+    print(b_aic)
 
 
+
+    
 
     

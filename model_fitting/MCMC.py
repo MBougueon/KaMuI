@@ -3,9 +3,11 @@
 
 import distribution as dis
 import numpy as np
+import matplotlib.pylab as plt
+
 from launch import *
 from data_extraction import *
-import matplotlib.pylab as plt
+from scoring import *
 
 def compute_conditional_params(mu, cov, idx, known_indices, known_values):
     """
@@ -253,6 +255,8 @@ if __name__ == '__main__':
                         # kwargs['log_folder'],
                         # kwargs['nb_para_job'],
                         # kwargs['repeat'])
-
-    df = get_data(kwargs['output_file'], ['off_rate', 'on_rate'], [75,100])
+    exp_val = [900,9000]
+    observations = ['AB', 'Cpp']
+    df = get_data(kwargs['output_file'], ['off_rate', 'on_rate'], [100])
+    score_calc(df,parameters,exp_val,observations )
     print(df)
