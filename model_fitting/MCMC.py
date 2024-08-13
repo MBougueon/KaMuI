@@ -255,8 +255,9 @@ if __name__ == '__main__':
                         # kwargs['log_folder'],
                         # kwargs['nb_para_job'],
                         # kwargs['repeat'])
-    exp_val = [900,9000]
-    observations = ['AB', 'Cpp']
+    
+
+    exp_val = {'AB': 900, 'Cpp':9000}
     df = get_data(kwargs['output_file'], ['off_rate', 'on_rate'], [100])
-    score_calc(df,parameters,exp_val,observations )
+    score_calc(df,parameters,exp_val)
     print(df)
