@@ -256,8 +256,9 @@ if __name__ == '__main__':
                         # kwargs['nb_para_job'],
                         # kwargs['repeat'])
     
-
-    exp_val = {'AB': 900, 'Cpp':9000}
+    rep = 2
+    exp_val = {'AB': [900,905], 'Cpp':[9000,9050]}
     df = get_data(kwargs['output_file'], ['off_rate', 'on_rate'], [100])
-    score_calc(df,parameters,exp_val)
+    new_val = score_calc(df,parameters,exp_val, rep)
+    print(new_val)
     print(df)

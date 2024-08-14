@@ -22,7 +22,7 @@ def aic_c(log_likelihood, k, n):
     aic = log_likelihood + ((2*k*n)/(n-k-1))
     return(aic)
 
-def likelihood(exp_data, sim_data, m, n):
+def likelihood(exp_data, sim_data):
     """Calculate the likelihood of the model given its parameters and the experimental data
     Parameters:
     -----------
@@ -39,23 +39,23 @@ def likelihood(exp_data, sim_data, m, n):
     --------
     """
 
-    term1 = n * m * np.log(2 * np.pi)
+    # term1 = n * m * np.log(2 * np.pi)
 
     # Term: sum over i and j
-    term2 = 0
     # each validation point
-
-    for j in range(m):
-        #distance between exp and simul data
-        prediction_error = [exp_data[j] - sim_data[j][l] for l  in range(len(sim_data[j]))]
-
+    log_likelihood_value = 0
+    for name in sim_data.keys():
+        # prediction_error = [i -j for i, j in zip(exp_data[name], sim_data[name])]
+        prediction_error = np.array(exp_data[name]) - np.array(sim_data[name])
         error_variance = np.std(prediction_error)
+        mean_error = np.mean(prediction_error)
         if error_variance == 0:
             error_variance = 10e-6
-        term2 += (prediction_error[j] / error_variance )**2 + 2 * np.log(error_variance)
-
-    # Combine the terms to get -2 log(L)
-    log_likelihood_value = term1 + term2
+        term1 = len(exp_data) * len(exp_data[name]) * np.log(2 * np.pi)
+        term2 = (mean_error / error_variance )**2 + 2 * np.log(error_variance)
+        # Combine the terms to get -2 log(L)
+        # get a -2log(L) for each exp observation to normalized it by the number of replicats
+        log_likelihood_value += ((term1 + term2)/len(exp_data[name]))
     return log_likelihood_value
 
 def weighted_aic (aic_values):
@@ -75,7 +75,7 @@ def weighted_aic (aic_values):
     w_aicc = np.exp(-0.5*d_aicc)/np.sum(np.exp(-0.5*d_aicc))
     return(w_aicc)
 
-def score_calc(df, parameters, exp_data ):
+def score_calc(df, parameters, exp_data, replicat ):
     """Calculate the score for each paramters
 
     Parameters:
@@ -86,6 +86,8 @@ def score_calc(df, parameters, exp_data ):
         name of the parameters
     exp_data: dictionnary
         name and value of the experimental observations
+    replicat: int
+        number of replicat for the simulation
 
     Returns:
     ------
@@ -93,13 +95,15 @@ def score_calc(df, parameters, exp_data ):
         paremeters name and value of the model with the best weighted aic
     """
     aic = {}
+    rep = 0
     for id in enumerate(df['exp_sim']):
         for time in enumerate(df.loc[df['exp_sim'] == id[1], '[T]']):
-            sim_exp = []
+            sim_exp = {}
             for obs in exp_data.keys():
-                sim_exp.append(df.loc[(df['exp_sim'] == id[1]) & (df['[T]'] == time[1]), obs].tolist())
-        ll = likelihood(list(exp_data.values()), sim_exp, len(sim_exp[0]), len(exp_data))
-        aic[id[1]]= aic_c(ll,len(sim_exp[0]), len(parameters))
+                sim_exp[obs] = df.loc[(df['exp_sim'] == id[1]) & (df['[T]'] == time[1]), obs].tolist()
+        ll = likelihood(exp_data, sim_exp)
+        aic[id[1]]= aic_c(ll,replicat, len(parameters))
+
     b_aic = weighted_aic(list(aic.values()))
     w_aic = dict(zip(list(aic.keys()), b_aic))
     best_id = max(w_aic, key=w_aic.get)
