@@ -65,7 +65,7 @@ def compute_conditional_params(mu, cov, idx, known_indices, known_values):
     return conditional_mean, conditional_variance
 
 def gibbs_sampler(parameters,prior_distribution):
-    """Gibbs sampler 
+    """Gibbs sampler
 
     Parameters
     ----------
@@ -102,7 +102,6 @@ def gibbs_sampler(parameters,prior_distribution):
             #replace the value of the current parameter by its new one
             values[idx]= current
     else: 
-        #TODO Search for Gamma distribution
         print(f"{prior_distribution} not implemented")
 
     return values
@@ -211,7 +210,7 @@ def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2):
                     sample[p].append(parameters[p][0])   # Store the current parameter sample)
                     tries[t] = tries[t]+tri
                 t +=1
-                
+
         elif approach == "gibbs":
             samp = gibbs_sampler(parameters,prior_distribution)
             if i >= idx_burn_in:
@@ -219,46 +218,105 @@ def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2):
                 for p in parameters.keys():
                     sample[p].append(samp[idx])
                     idx +=1
-        
+
     return sample, tries
 
+def para_inference(N=10, SOME_THRESHOLD = 5, **kwargs):
+    """
+    Inference of the parameters values by repeated generation of values, simulation and scoring
+    to infer the best set of parameter values.
 
+    Parameters
+    ----------
+    N: int
+        Number of iterations.
+    SOME_THRESHOLD: int
+        Threshold for the number of meters for which an additional simulation may be unnecessary.
+        
+    **kwargs: dict
+        Arbitrary keyword arguments that allow you to pass additional parameters to the function.
+        The expected keys in kwargs include:
+        - 'parameters': dict
+            A dictionary containing the parameters to be inferred. Each key represents a parameter name,
+            and its value is typically a list or range that will be refined during the iterations.
+        - 'distribution': str
+            The type of distribution to be used in the MCMC process (e.g., normal, uniform).
+        - 'method': str
+            The method to be used for parameter inference (e.g., 'metropolis_hasting').
+        - 'Num': int
+            Number of samples to be generated in each MCMC iteration.
+        - 'burn_in': float
+            The proportion of initial samples to discard during the MCMC process to allow the chain to stabilize.
+        - 'output_file': str
+            The path to the output file where data is stored or from which data is retrieved.
+        - Additional keys (used in parallelized_lauch):
+            - 'kasim': str
+                A path or identifier needed for the simulation.
+            - 'time': int
+                Simulation time.
+            - 'variables_units': dict
+                A dictionary mapping variables to their respective units.
+            - 'input': str
+                Path to the input file for the simulation.
+            - 'output': str
+                Path to the output directory for the simulation results.
+            - 'log': str
+                Path to the log file where the simulation logs will be stored.
+            - 'nb_jobs': int
+                Number of parallel jobs to run during the simulation.
+            - 'repetition': int
+                Number of repetitions for the simulation.
+    """
+    # Initialize variables
+    parameters = kwargs["parameters"]  
+    best_aic = 10e6  # Set an initial high value for the best AIC score, to be minimized.
+    limit_reach = 0  # Counter to track how many times the optimization limit has been reached.
+
+    for i in range(N):
+        generated_val, tries = mcmc(parameters, kwargs['distribution'], kwargs['method'], kwargs['Num'], kwargs['burn_in'])
+        parallelized_launch(kwargs['kasim'],
+                        kwargs['time'],
+                        generated_val,
+                        kwargs['input_file'],
+                        kwargs['output_file'],
+                        kwargs['log_folder'],
+                        kwargs['nb_para_job'],
+                        kwargs['repeat'])
+        
+        parameters_name = list(kwargs["parameters"].keys())
+        df = get_data(kwargs['output_file'], parameters_name, [100])
+        new_val, aic = score_calc(df, parameters, kwargs['exp_val'], kwargs['repeat'])
+        
+        # Calculate a weighted AIC score to compare the current and best AIC scores.
+        b_aic = weighted_aic([best_aic, aic])
+        # If the new AIC score is better, update the parameters with the new values.
+        if b_aic[1] == max(b_aic):
+            for key in new_val.keys():
+                parameters[key][0] = new_val[key]
+        else:
+            # If the optimal parameter set is reached, increment the limit_reach counter.
+            limit_reach +=1
+
+        # If the limit_reach counter exceeds a certain threshold (not provided), further simulation may be unnecessary.
+        if limit_reach > SOME_THRESHOLD:  # Note: SOME_THRESHOLD should be defined based on specific requirements.
+            break  # Exit the loop if the limit is reached.
 
 if __name__ == '__main__':
 
-    kwargs = {"kasim":"/Tools/KappaTools-master/bin/KaSim",
+    kwargs = {
+            "parameters" : {'off_rate' : [4,9,0.5],'on_rate' : [1e-1, 1e-1, 3e-1]},
+            "distribution": "normal",
+            "method" : "metropolis_hasting",
+            "Num" : 100,
+            "burn_in" : 0.2,
+            "exp_val" : {'AB': [900,905], 'Cpp':[9000,9050]},
+            "kasim":"/Tools/KappaTools-master/bin/KaSim",
             "time" : 1000,
             "input_file":"/home/palantir/Post_doc/KaMuI/model_fitting/toy_model.ka",
             "output_file": "/home/palantir/Post_doc/KaMuI/model_fitting/tests/",
             "log_folder": "/home/palantir/Post_doc/KaMuI/model_fitting/tests/logs",
             "nb_para_job":2,
-            "repeat":2 }
-    parameters = {'off_rate' : [4,9,0.5],
-                'on_rate' : [1e-1, 1e-1, 3e-1]}
-                #'mod_rate' :[10,70,7]}
-                   #'bidule' : [10,10,1]}
-    method = "metropolis_hasting"
-    #generated_val, tries = mcmc(parameters, "normal", method, 5, 0.2)
-    # for key in parameters.keys():
-    #     t =  [x for x in range(1, len(generated_val[key])+1)]
-    #     plt.plot(t,generated_val[key])
-    #     plt.title(key)
-    #     # plt.show()
-    #     plt.savefig(f'/home/palantir/Post_doc/KaMuI/model_fitting/tests/plots/{method}_{key}.png')
-
-    #     plt.close()
-    # parallelized_launch(kwargs['kasim'],
-                        # kwargs['time'],
-                        # generated_val,
-                        # kwargs['input_file'],
-                        # kwargs['output_file'],
-                        # kwargs['log_folder'],
-                        # kwargs['nb_para_job'],
-                        # kwargs['repeat'])
+            "repeat":2 
+            }
     
-    rep = 2
-    exp_val = {'AB': [900,905], 'Cpp':[9000,9050]}
-    df = get_data(kwargs['output_file'], ['off_rate', 'on_rate'], [100])
-    new_val = score_calc(df,parameters,exp_val, rep)
-    print(new_val)
-    print(df)
+    para_inference(**kwargs)

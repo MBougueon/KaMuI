@@ -106,10 +106,11 @@ def score_calc(df, parameters, exp_data, replicat ):
 
     b_aic = weighted_aic(list(aic.values()))
     w_aic = dict(zip(list(aic.keys()), b_aic))
+    
     best_id = max(w_aic, key=w_aic.get)
+    best_aic = aic[best_id]
     best_val = {}
     for para in parameters:
         best_val[para] = df.loc[df['exp_sim'] == best_id, para].tolist()[0]
-    return(best_val)
-    #TODO
-    #Relancer MCMC et simulation avec update des prio distribution en utilisant nouvelles valeurs
+    return(best_val,best_aic)
+    
