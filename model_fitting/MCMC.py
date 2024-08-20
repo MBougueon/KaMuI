@@ -221,9 +221,9 @@ def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2):
 
     return sample, tries
 
-def para_inference(N=10, SOME_THRESHOLD = 5, **kwargs):
+def parameters_estimation(N=10, SOME_THRESHOLD = 5, **kwargs):
     """
-    Inference of the parameters values by repeated generation of values, simulation and scoring
+    Inference of parameter values by repeated generation of values, simulation, and scoring
     to infer the best set of parameter values.
 
     Parameters
@@ -299,7 +299,71 @@ def para_inference(N=10, SOME_THRESHOLD = 5, **kwargs):
 
         # If the limit_reach counter exceeds a certain threshold (not provided), further simulation may be unnecessary.
         if limit_reach > SOME_THRESHOLD:  # Note: SOME_THRESHOLD should be defined based on specific requirements.
+            return new_val
             break  # Exit the loop if the limit is reached.
+    return new_val
+
+def local_estimation (N=10, SOME_THRESHOLD = 5, **kwargs):
+    """
+    Inference of the parameters values by repeated generation of values, simulation and scoring
+    to infer the best set of parameter values. Estimation of the parameters one by one at a local scale
+
+    Parameters
+    ----------
+    N: int
+        Number of iterations.
+    SOME_THRESHOLD: int
+        Threshold for the number of meters for which an additional simulation may be unnecessary.
+        
+    **kwargs: dict
+        Arbitrary keyword arguments that allow you to pass additional parameters to the function.
+        The expected keys in kwargs include:
+        - 'parameters': dict
+            A dictionary containing the parameters to be inferred. Each key represents a parameter name,
+            and its value is typically a list or range that will be refined during the iterations.
+        - 'distribution': str
+            The type of distribution to be used in the MCMC process (e.g., normal, uniform).
+        - 'method': str
+            The method to be used for parameter inference (e.g., 'metropolis_hasting').
+        - 'Num': int
+            Number of samples to be generated in each MCMC iteration.
+        - 'burn_in': float
+            The proportion of initial samples to discard during the MCMC process to allow the chain to stabilize.
+        - 'output_file': str
+            The path to the output file where data is stored or from which data is retrieved.
+        - Additional keys (used in parallelized_lauch):
+            - 'kasim': str
+                A path or identifier needed for the simulation.
+            - 'time': int
+                Simulation time.
+            - 'variables_units': dict
+                A dictionary mapping variables to their respective units.
+            - 'input': str
+                Path to the input file for the simulation.
+            - 'output': str
+                Path to the output directory for the simulation results.
+            - 'log': str
+                Path to the log file where the simulation logs will be stored.
+            - 'nb_jobs': int
+                Number of parallel jobs to run during the simulation.
+            - 'repetition': int
+                Number of repetitions for the simulation.
+    """
+
+    # Store a copy of the experimental values (exp_val) to restore later.
+    copy_exp_val = kwargs['exp_val']
+    for key in copy_exp_val.keys():
+        kwargs['exp_val'] = {key : copy_exp_val[key]}
+        new_val=parameters_estimation(**kwargs)
+        #repetition for sim and exp data must be the same for the likelihood
+        kwargs["repeat"]=len(copy_exp_val[key])
+    # After estimating each parameter individually, update the parameters in kwargs with the new values.
+    for key in new_val.keys():
+        kwargs["parameters"][key][0] = new_val[key]
+    kwargs['exp_val'] = copy_exp_val
+    new_val=parameters_estimation(**kwargs)
+
+    return new_val
 
 if __name__ == '__main__':
 
@@ -319,4 +383,6 @@ if __name__ == '__main__':
             "repeat":2 
             }
     
-    para_inference(**kwargs)
+    # parameters_values = parameters_estimation(**kwargs)
+    parameters_values = local_estimation(**kwargs)
+    print(parameters_values)
