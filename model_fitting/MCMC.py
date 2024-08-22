@@ -221,7 +221,7 @@ def mcmc(parameters, prior_distribution, approach, N = 1000, burn_in = 0.2):
 
     return sample, tries
 
-def parameters_estimation(N=10, SOME_THRESHOLD = 5, **kwargs):
+def parameters_estimation(N=3, SOME_THRESHOLD = 5, **kwargs):
     """
     Inference of parameter values by repeated generation of values, simulation, and scoring
     to infer the best set of parameter values.
@@ -303,7 +303,7 @@ def parameters_estimation(N=10, SOME_THRESHOLD = 5, **kwargs):
             break  # Exit the loop if the limit is reached.
     return new_val
 
-def local_estimation (N=10, SOME_THRESHOLD = 5, **kwargs):
+def local_estimation (N=3, SOME_THRESHOLD = 5, **kwargs):
     """
     Inference of the parameters values by repeated generation of values, simulation and scoring
     to infer the best set of parameter values. Estimation of the parameters one by one at a local scale
@@ -354,7 +354,7 @@ def local_estimation (N=10, SOME_THRESHOLD = 5, **kwargs):
     copy_exp_val = kwargs['exp_val']
     for key in copy_exp_val.keys():
         kwargs['exp_val'] = {key : copy_exp_val[key]}
-        new_val=parameters_estimation(**kwargs)
+        new_val=parameters_estimation(N= N, **kwargs)
         #repetition for sim and exp data must be the same for the likelihood
         kwargs["repeat"]=len(copy_exp_val[key])
     # After estimating each parameter individually, update the parameters in kwargs with the new values.
@@ -368,10 +368,10 @@ def local_estimation (N=10, SOME_THRESHOLD = 5, **kwargs):
 if __name__ == '__main__':
 
     kwargs = {
-            "parameters" : {'off_rate' : [4,9,0.5],'on_rate' : [1e-1, 1e-1, 3e-1]},
+            "parameters" : {'off_rate' : [4,9,0.5],'on_rate' : [1e-1, 1e-1, 3e-2]},
             "distribution": "normal",
             "method" : "metropolis_hasting",
-            "Num" : 100,
+            "Num" : 5,
             "burn_in" : 0.2,
             "exp_val" : {'AB': [900,905], 'Cpp':[9000,9050]},
             "kasim":"/Tools/KappaTools-master/bin/KaSim",
@@ -384,5 +384,5 @@ if __name__ == '__main__':
             }
     
     # parameters_values = parameters_estimation(**kwargs)
-    parameters_values = local_estimation(**kwargs)
+    parameters_values = local_estimation(N=3, **kwargs)
     print(parameters_values)

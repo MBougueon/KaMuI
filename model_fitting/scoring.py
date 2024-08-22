@@ -40,7 +40,6 @@ def likelihood(exp_data, sim_data):
     """
 
     # term1 = n * m * np.log(2 * np.pi)
-
     # Term: sum over i and j
     # each validation point
     log_likelihood_value = 0
@@ -101,7 +100,7 @@ def score_calc(df, parameters, exp_data, replicat ):
             sim_exp = {}
             for obs in exp_data.keys():
                 sim_exp[obs] = df.loc[(df['exp_sim'] == id[1]) & (df['[T]'] == time[1]), obs].tolist()
-        ll = likelihood(exp_data, sim_exp)
+        ll = likelihood(exp_data, sim_exp)    
         aic[id[1]]= aic_c(ll,replicat, len(parameters))
 
     b_aic = weighted_aic(list(aic.values()))

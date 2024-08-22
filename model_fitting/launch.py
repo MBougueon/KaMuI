@@ -2,6 +2,7 @@
 Alow the launching of mulltiple Kappa simulations using an INI file for the parameters
 """
 # -*- coding: utf-8 -*-
+import fnmatch
 import itertools
 import os
 import random
@@ -83,11 +84,14 @@ def launch_kasim(kasim,time,varia,input_file,output,log_folder,repeat,combinatio
     if ((len(varia.keys()) > 1) or (repeat > 1)):
         # In case of numerous test with repetition, the creation of numerous folder for each combination is advices
         output_file = f'{output}{output_name}/'
-        if not os.path.isdir(output):
-            os.mkdir(output)
-    output_name = output_name + f"_{str(nb_repeat)}"
-    command = f"{kasim} {input_file} {var_com} -l {time_simu} -d {log_folder} -o {output_file}{output_name}.csv"
-    # subprocess.run(command, shell=True, check=True)  # execute the KaSim command
+        if not os.path.isdir(output_file):
+            os.mkdir(output_file)
+
+        count = len(fnmatch.filter(os.listdir(output_file), '*.csv'))
+    if count < repeat:
+        output_name = output_name + f"_{str(nb_repeat)}"
+        command = f"{kasim} {input_file} {var_com} -l {time_simu} -d {log_folder} -o {output_file}{output_name}.csv"
+        subprocess.run(command, shell=True, check=True)  # execute the KaSim command
 
 def parallelized_launch(kasim, time, variables_test, input_file, output_file, log_folder, nb_para_job=4, repeat =1):
     """
