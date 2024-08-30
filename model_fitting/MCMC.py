@@ -236,9 +236,9 @@ def parameters_estimation(N=3, SOME_THRESHOLD = 5, **kwargs):
     **kwargs: dict
         Arbitrary keyword arguments that allow you to pass additional parameters to the function.
         The expected keys in kwargs include:
-        - 'parameters': dict
-            A dictionary containing the parameters to be inferred. Each key represents a parameter name,
-            and its value is typically a list or range that will be refined during the iterations.
+        - 'parameters': dict of dict
+        A dictionary containing experimental observations (keys) and their respective parameter 
+        values (sub-dictionaries) that were used in the simulation.
         - 'distribution': str
             The type of distribution to be used in the MCMC process (e.g., normal, uniform).
         - 'method': str
@@ -254,8 +254,6 @@ def parameters_estimation(N=3, SOME_THRESHOLD = 5, **kwargs):
                 A path or identifier needed for the simulation.
             - 'time': int
                 Simulation time.
-            - 'variables_units': dict
-                A dictionary mapping variables to their respective units.
             - 'input': str
                 Path to the input file for the simulation.
             - 'output': str
@@ -268,36 +266,46 @@ def parameters_estimation(N=3, SOME_THRESHOLD = 5, **kwargs):
                 Number of repetitions for the simulation.
     """
     # Initialize variables
-    parameters = kwargs["parameters"]  
+    para_generated = {}
+    for obs in kwargs["parameters"].keys():
+        for para in kwargs["parameters"][obs].keys():
+            para_generated[para] = kwargs["parameters"][obs][para]
     best_aic = 10e6  # Set an initial high value for the best AIC score, to be minimized.
     limit_reach = 0  # Counter to track how many times the optimization limit has been reached.
-
+    timing = []
     for i in range(N):
-        generated_val, tries = mcmc(parameters, kwargs['distribution'], kwargs['method'], kwargs['Num'], kwargs['burn_in'])
-        parallelized_launch(kwargs['kasim'],
-                        kwargs['time'],
-                        generated_val,
-                        kwargs['input_file'],
-                        kwargs['output_file'],
-                        kwargs['log_folder'],
-                        kwargs['nb_para_job'],
-                        kwargs['repeat'])
-        
-        parameters_name = list(kwargs["parameters"].keys())
-        df = get_data(kwargs['output_file'], parameters_name, [100])
-        new_val, aic = score_calc(df, parameters, kwargs['exp_val'], kwargs['repeat'])
-        
+        generated_val, tries = mcmc(para_generated, kwargs['distribution'], kwargs['method'], kwargs['Num'], kwargs['burn_in'])
+        # parallelized_launch(kwargs['kasim'],
+        #                 kwargs['time'],
+        #                 generated_val,
+        #                 kwargs['input_file'],
+        #                 kwargs['output_file'],
+        #                 kwargs['log_folder'],
+        #                 kwargs['nb_para_job'],
+        #                 kwargs['repeat'])
+        parameters_name = []
+        for obs in kwargs["parameters"].keys():
+            parameters_name += (list(kwargs["parameters"][obs].keys()))
+            timing.append(obs[2])
+        timing = list(set(timing))
+        print(timing)
+        df = get_data(kwargs['output_file'], parameters_name, timing)
+        new_val, aic = score_calc(df, kwargs["parameters"], kwargs['repeat'])
+
         # Calculate a weighted AIC score to compare the current and best AIC scores.
         b_aic = weighted_aic([best_aic, aic])
         # If the new AIC score is better, update the parameters with the new values.
         if b_aic[1] == max(b_aic):
-            for key in new_val.keys():
-                parameters[key][0] = new_val[key]
+            for obs in kwargs["parameters"].keys():
+                for key in new_val.keys():
+            #Estimated parameter are not necessary the same for each validation point
+                    if key in kwargs["parameters"][obs]:
+                        kwargs["parameters"][obs][key][0] = new_val[key]
         else:
             # If the optimal parameter set is reached, increment the limit_reach counter.
             limit_reach +=1
 
-        # If the limit_reach counter exceeds a certain threshold (not provided), further simulation may be unnecessary.
+            # If the limit_reach counter exceeds a certain threshold (not provided), further simulation may be unnecessary.
         if limit_reach > SOME_THRESHOLD:  # Note: SOME_THRESHOLD should be defined based on specific requirements.
             return new_val
             break  # Exit the loop if the limit is reached.
@@ -318,9 +326,9 @@ def local_estimation (N=3, SOME_THRESHOLD = 5, **kwargs):
     **kwargs: dict
         Arbitrary keyword arguments that allow you to pass additional parameters to the function.
         The expected keys in kwargs include:
-        - 'parameters': dict
-            A dictionary containing the parameters to be inferred. Each key represents a parameter name,
-            and its value is typically a list or range that will be refined during the iterations.
+        - 'parameters': dict of dict
+        A dictionary containing experimental observations (keys) and their respective parameter 
+        values (sub-dictionaries) that were used in the simulation.
         - 'distribution': str
             The type of distribution to be used in the MCMC process (e.g., normal, uniform).
         - 'method': str
@@ -336,8 +344,6 @@ def local_estimation (N=3, SOME_THRESHOLD = 5, **kwargs):
                 A path or identifier needed for the simulation.
             - 'time': int
                 Simulation time.
-            - 'variables_units': dict
-                A dictionary mapping variables to their respective units.
             - 'input': str
                 Path to the input file for the simulation.
             - 'output': str
@@ -349,18 +355,22 @@ def local_estimation (N=3, SOME_THRESHOLD = 5, **kwargs):
             - 'repetition': int
                 Number of repetitions for the simulation.
     """
-
+    new_val = {}
     # Store a copy of the experimental values (exp_val) to restore later.
-    copy_exp_val = kwargs['exp_val']
-    for key in copy_exp_val.keys():
-        kwargs['exp_val'] = {key : copy_exp_val[key]}
-        new_val=parameters_estimation(N= N, **kwargs)
+    copy_para_val = kwargs['parameters']
+    for key in copy_para_val.keys():
+        kwargs['parameters'] = {key : copy_para_val[key]}
+        #merge the dictionnary of parameters estimated
+        new_val= new_val | parameters_estimation(N= N, **kwargs)
         #repetition for sim and exp data must be the same for the likelihood
-        kwargs["repeat"]=len(copy_exp_val[key])
+        kwargs["repeat"]=len(key[1])
     # After estimating each parameter individually, update the parameters in kwargs with the new values.
-    for key in new_val.keys():
-        kwargs["parameters"][key][0] = new_val[key]
-    kwargs['exp_val'] = copy_exp_val
+    kwargs['parameters'] = copy_para_val
+    for obs in kwargs["parameters"].keys():
+        for key in new_val.keys():
+            #Estimated parameter are not necessary the same for each validation point
+            if key in kwargs["parameters"][obs]:
+                kwargs["parameters"][obs][key][0] = new_val[key]
     new_val=parameters_estimation(**kwargs)
 
     return new_val
@@ -368,12 +378,14 @@ def local_estimation (N=3, SOME_THRESHOLD = 5, **kwargs):
 if __name__ == '__main__':
 
     kwargs = {
-            "parameters" : {'off_rate' : [4,9,0.5],'on_rate' : [1e-1, 1e-1, 3e-2]},
+            "parameters" : {
+                ('AB', (900,905), 85): {'off_rate' : [4,9,0.5]},
+                ('Cpp', (9000,9050), 100) : {'on_rate' : [1e-1, 1e-1, 3e-2]}
+                },
             "distribution": "normal",
             "method" : "metropolis_hasting",
             "Num" : 5,
             "burn_in" : 0.2,
-            "exp_val" : {'AB': [900,905], 'Cpp':[9000,9050]},
             "kasim":"/Tools/KappaTools-master/bin/KaSim",
             "time" : 1000,
             "input_file":"/home/palantir/Post_doc/KaMuI/model_fitting/toy_model.ka",

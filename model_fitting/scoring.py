@@ -74,42 +74,54 @@ def weighted_aic (aic_values):
     w_aicc = np.exp(-0.5*d_aicc)/np.sum(np.exp(-0.5*d_aicc))
     return(w_aicc)
 
-def score_calc(df, parameters, exp_data, replicat ):
-    """Calculate the score for each paramters
+def score_calc(df, parameters, replicat ):
+    """
+    Calculate the score for each set of parameters based on the simulated data, 
+    comparing it to experimental observations and determining the best parameters using AIC.
 
     Parameters:
     -----------
-    df: panda dataframe,
-        df with sim values, paremters values
-    parameters: list,
-        name of the parameters
-    exp_data: dictionnary
-        name and value of the experimental observations
+    df: pandas DataFrame
+        A dataframe containing simulated experiment results, time points, and parameter values.
+    parameters: dict of dict
+        A dictionary containing experimental observations (keys) and their respective parameter 
+        values (sub-dictionaries) that were used in the simulation.
     replicat: int
-        number of replicat for the simulation
+        The number of replicates used in the simulation, which will be needed for calculating the AIC.
 
     Returns:
-    ------
-    best_val: dictionary,
-        paremeters name and value of the model with the best weighted aic
+    --------
+    best_val: dict
+        A dictionary containing the parameter names and their respective values for the model 
+        that has the best (lowest) weighted AIC score.
+    best_aic: float
+        The AIC score of the best model.
     """
-    aic = {}
-    rep = 0
-    for id in enumerate(df['exp_sim']):
-        for time in enumerate(df.loc[df['exp_sim'] == id[1], '[T]']):
-            sim_exp = {}
-            for obs in exp_data.keys():
-                sim_exp[obs] = df.loc[(df['exp_sim'] == id[1]) & (df['[T]'] == time[1]), obs].tolist()
-        ll = likelihood(exp_data, sim_exp)    
-        aic[id[1]]= aic_c(ll,replicat, len(parameters))
 
+    aic = {}
+    exp_data = {}
+    # Loop over all the experiment IDs in the 'exp_sim' column of the dataframe
+    for exp_id in enumerate(df['exp_sim']):
+        # Loop over the time points associated with each experiment in the dataframe
+        for time in enumerate(df.loc[df['exp_sim'] == exp_id[1], '[T]']):
+            sim_exp = {}
+            for obs in parameters.keys():
+                # Extract the list of simulated values for the current observable and time point
+                sim_exp[obs[0]] = df.loc[(df['exp_sim'] == exp_id[1]) & (df['[T]'] == time[1]), obs[0]].tolist()
+                # Store the corresponding experimental data for the current observable
+                exp_data[obs[0]] = list(obs[1])
+        ll = likelihood(exp_data, sim_exp)
+        aic[exp_id[1]]= aic_c(ll,replicat, len(parameters))
+        
+    # Find the experiment ID with the best (lowest) weighted AIC score
     b_aic = weighted_aic(list(aic.values()))
     w_aic = dict(zip(list(aic.keys()), b_aic))
-    
+
     best_id = max(w_aic, key=w_aic.get)
     best_aic = aic[best_id]
     best_val = {}
-    for para in parameters:
-        best_val[para] = df.loc[df['exp_sim'] == best_id, para].tolist()[0]
+    # Loop through the observables and parameters to store the best parameter values
+    for obs in parameters:
+        for para in parameters[obs]:
+            best_val[para] = df.loc[df['exp_sim'] == best_id, para].tolist()[0]
     return(best_val,best_aic)
-    

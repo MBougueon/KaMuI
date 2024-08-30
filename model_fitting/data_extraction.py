@@ -94,7 +94,6 @@ def get_data(folder, variables, timing):
     df_list = []
     col_name = []
     exp_id = 1
-
     for subfold in os.listdir(folder):
         file_path = f"{folder}{subfold}/"#concatenattion to form the path were the files are
         var_v = []
@@ -105,7 +104,7 @@ def get_data(folder, variables, timing):
             if (len(var_temp) > 0):
                 var_v.append(re.findall(r"\d+[,]*\d*", "".join(var_temp))[0])
                 var_v = [v.replace(',','.') for v in var_v]
-        if (len(var_v) > 0):
+        if (len(var_v) == len(variables)):
             for item in var_v:
                 var_v_float.append(float(item))
             d_list, col_name = parse_dataframes(file_path, var_v_float, variables, timing, exp_id)
